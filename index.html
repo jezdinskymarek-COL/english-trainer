@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>English Trainer – učíme se anglicky</title>
+<style>
+  :root {
+    --bg: #f4f6fb; --card: #ffffff; --text: #1d2433; --muted: #5d6679;
+    --accent: #3b5bdb; --accent-d: #2f49b3; --ok: #2b9348; --ok-bg: #e3f6e8;
+    --bad: #d62828; --bad-bg: #fde8e8; --border: #dde2ee; --shadow: 0 2px 10px rgba(30,40,80,.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151d; --card: #1c212d; --text: #e7eaf3; --muted: #9aa3b8;
+      --accent: #7c97ff; --accent-d: #9bb0ff; --ok: #5fd47e; --ok-bg: #173424;
+      --bad: #ff7b7b; --bad-bg: #3a1c1c; --border: #2c3346; --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+         background: var(--bg); color: var(--text); line-height: 1.5; }
+  header { background: var(--card); border-bottom: 1px solid var(--border); }
+  .bar { max-width: 760px; margin: 0 auto; padding: 12px 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .logo { font-weight: 800; font-size: 1.2rem; cursor: pointer; margin-right: auto; }
+  .logo span { color: var(--accent); }
+  .chip { background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px; font-size: .9rem; white-space: nowrap; }
+  main { max-width: 760px; margin: 0 auto; padding: 20px 16px 60px; }
+  h1 { font-size: 1.6rem; margin: 0 0 6px; }
+  h2 { font-size: 1.2rem; margin: 0 0 10px; }
+  p.lead { color: var(--muted); margin: 0 0 20px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; box-shadow: var(--shadow); margin-bottom: 16px; }
+  .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
+  button { font: inherit; cursor: pointer; border-radius: 10px; border: 1px solid var(--border); background: var(--card); color: var(--text); padding: 10px 16px; transition: .15s; }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+  button.primary:hover:not(:disabled) { background: var(--accent-d); }
+  button:disabled { opacity: .6; cursor: default; }
+  .tile { text-align: left; padding: 16px; display: block; width: 100%; }
+  .tile b { display: block; font-size: 1.05rem; margin-bottom: 2px; }
+  .tile small { color: var(--muted); }
+  .tile.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
+  .progress { height: 8px; background: var(--border); border-radius: 99px; overflow: hidden; margin-bottom: 18px; }
+  .progress > div { height: 100%; background: var(--accent); transition: width .3s; }
+  .prompt { font-size: 1.5rem; font-weight: 700; margin: 6px 0 4px; }
+  .sub { color: var(--muted); margin-bottom: 16px; }
+  .options { display: grid; gap: 10px; }
+  .options button { text-align: left; }
+  .options button.ok { background: var(--ok-bg); border-color: var(--ok); }
+  .options button.bad { background: var(--bad-bg); border-color: var(--bad); }
+  .feedback { margin-top: 14px; padding: 12px 14px; border-radius: 10px; }
+  .feedback.ok { background: var(--ok-bg); border: 1px solid var(--ok); }
+  .feedback.bad { background: var(--bad-bg); border: 1px solid var(--bad); }
+  .flash { min-height: 190px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; cursor: pointer; user-select: none; }
+  .flash .word { font-size: 2rem; font-weight: 800; }
+  .flash .hint { color: var(--muted); font-size: .9rem; margin-top: 8px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+  .row > * { flex: 1 1 140px; }
+  input[type=text] { width: 100%; font: inherit; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+  .big { font-size: 3rem; text-align: center; margin: 0; }
+  .center { text-align: center; }
+  .link { background: none; border: none; color: var(--accent); padding: 0; text-decoration: underline; }
+  .bars { display: grid; gap: 8px; }
+  .bar-line { display: grid; grid-template-columns: 40px 1fr 50px; gap: 10px; align-items: center; font-size: .9rem; }
+  .bar-track { height: 10px; background: var(--border); border-radius: 99px; overflow: hidden; }
+  .bar-track > div { height: 100%; background: var(--ok); }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="logo" id="logo" tabindex="0" role="link">English<span>Trainer</span></div>
+    <div class="chip" id="chip-level"></div>
+    <div class="chip" id="chip-streak"></div>
+    <div class="chip" id="chip-xp"></div>
+  </div>
+</header>
+<main id="app"></main>
+
+<script>
+/* ================= DATA =================
+   Přidání obsahu: viz CLAUDE.md. Úrovně jdou od nejnižší po nejvyšší (pole LEVELS).
+   VOCAB[level] = [ [anglicky, česky, příklad věty], ... ]
+   GRAMMAR[level] = [ { q: "věta s ___", options: [...], a: "správná možnost", tip: "vysvětlení" }, ... ]
+   Prvních 2 otázky z GRAMMAR každé úrovně se používá v zařazovacím testu. */
+const LEVELS = [
+  { id: 'A1', name: 'Začátečník', desc: 'Základní slova a věty, představení se, každodenní situace.' },
+  { id: 'A2', name: 'Mírně pokročilý', desc: 'Jednoduchá minulost a budoucnost, nákupy, cestování.' },
+  { id: 'B1', name: 'Středně pokročilý', desc: 'Podmínkové věty, trpný rod, vyprávění zážitků a názorů.' },
+  { id: 'B2', name: 'Nad-středně pokročilý', desc: 'Složitější gramatika, abstraktní témata, plynulá komunikace.' },
+  { id: 'C1', name: 'Pokročilý', desc: 'Inverze, subjunktiv, nuance a odborná slovní zásoba.' }
+];
+
+const VOCAB = {
+  A1: [
+    ['house','dům','We live in a big house.'], ['water','voda','I drink water every day.'],
+    ['friend','přítel, kamarád','She is my best friend.'], ['book','kniha','This book is interesting.'],
+    ['eat','jíst','We eat dinner at seven.'], ['big','velký','They have a big dog.'],
+    ['school','škola','My school is near the park.'], ['morning','ráno','I run in the morning.'],
+    ['family','rodina','My family is small.'], ['red','červený','He has a red car.'],
+    ['dog','pes','The dog is in the garden.'], ['thank you','děkuji','Thank you for your help.']
+  ],
+  A2: [
+    ['travel','cestovat','I love to travel by train.'], ['weather','počasí','The weather is nice today.'],
+    ['expensive','drahý','This phone is too expensive.'], ['ticket','lístek, jízdenka','I need a ticket to Prague.'],
+    ['hungry','hladový','I am very hungry.'], ['holiday','dovolená, svátek','We go on holiday in July.'],
+    ['borrow','půjčit si','Can I borrow your pen?'], ['usually','obvykle','I usually get up at six.'],
+    ['neighbour','soused','Our neighbour is very kind.'], ['invite','pozvat','She invited me to her party.'],
+    ['message','zpráva','I sent you a message.'], ['arrive','přijet, dorazit','The train arrives at noon.']
+  ],
+  B1: [
+    ['achieve','dosáhnout','She achieved her goal.'], ['environment','životní prostředí','We must protect the environment.'],
+    ['disappointed','zklamaný','I was disappointed with the result.'], ['improve','zlepšit (se)','I want to improve my English.'],
+    ['opportunity','příležitost','This is a great opportunity.'], ['experience','zkušenost','He has a lot of experience.'],
+    ['suggest','navrhnout','I suggest we leave early.'], ['although','ačkoli','Although it rained, we went out.'],
+    ['afford','dovolit si (finančně)','We can\'t afford a new car.'], ['reliable','spolehlivý','He is a reliable colleague.'],
+    ['avoid','vyhnout se','Try to avoid fast food.'], ['gather','shromáždit, sebrat','Let\'s gather more information.']
+  ],
+  B2: [
+    ['reluctant','neochotný','He was reluctant to help.'], ['enhance','zvýšit, vylepšit','This will enhance your skills.'],
+    ['consequence','následek','Every action has a consequence.'], ['overwhelm','zahltit, ohromit','The workload overwhelmed her.'],
+    ['outcome','výsledek','The outcome was unexpected.'], ['hence','proto, tudíž','It was cheap, hence the popularity.'],
+    ['deal with','vypořádat se s','How do you deal with stress?'], ['striking','nápadný, úderný','There is a striking similarity.'],
+    ['scarce','vzácný, nedostatkový','Water is scarce in the desert.'], ['fulfil','splnit, naplnit','He fulfilled his promise.'],
+    ['drawback','nevýhoda','The only drawback is the price.'], ['thorough','důkladný','She did a thorough check.']
+  ],
+  C1: [
+    ['ubiquitous','všudypřítomný','Smartphones are ubiquitous today.'], ['mitigate','zmírnit','We must mitigate the risks.'],
+    ['ambiguous','nejednoznačný','The contract wording is ambiguous.'], ['meticulous','pečlivý, úzkostlivě přesný','He is meticulous about details.'],
+    ['undermine','podkopat','Rumours undermined her authority.'], ['inevitable','nevyhnutelný','Change is inevitable.'],
+    ['resilient','odolný, houževnatý','Children are often resilient.'], ['scrutinise','pečlivě zkoumat','Auditors scrutinise every record.'],
+    ['pragmatic','pragmatický, praktický','We need a pragmatic solution.'], ['elaborate','podrobně rozvést','Could you elaborate on that point?'],
+    ['tenuous','chatrný, slabý','The link between them is tenuous.'], ['alleviate','zmírnit (bolest, problém)','The medicine alleviates the pain.']
+  ]
+};
+
+const GRAMMAR = {
+  A1: [
+    { q: 'She ___ a student.', options: ['am','is','are'], a: 'is', tip: 'U he/she/it používáme "is".' },
+    { q: 'I ___ coffee every morning.', options: ['drink','drinks','drinking'], a: 'drink', tip: 'U "I" v Present Simple nepřidáváme -s.' },
+    { q: 'There ___ two cats in the garden.', options: ['is','are','be'], a: 'are', tip: 'Množné číslo → "there are".' },
+    { q: '___ you like pizza?', options: ['Do','Does','Are'], a: 'Do', tip: 'Otázka v Present Simple s "you" → "Do".' },
+    { q: 'This is ___ apple.', options: ['a','an','the'], a: 'an', tip: 'Před samohláskovým zvukem používáme "an".' },
+    { q: 'They ___ at home now.', options: ['is','am','are'], a: 'are', tip: 'U "they" používáme "are".' },
+    { q: 'My brother ___ football on Sundays.', options: ['play','plays','playing'], a: 'plays', tip: 'U he/she/it přidáváme -s.' }
+  ],
+  A2: [
+    { q: 'I ___ to London last year.', options: ['go','went','gone'], a: 'went', tip: '"Last year" → Past Simple; go → went (nepravidelné sloveso).' },
+    { q: 'He is ___ than his brother.', options: ['tall','taller','tallest'], a: 'taller', tip: 'Porovnání dvou věcí → 2. stupeň (taller than).' },
+    { q: 'We ___ watching TV when you called.', options: ['was','were','are'], a: 'were', tip: 'Past Continuous: were + -ing pro "we".' },
+    { q: 'I don\'t have ___ money.', options: ['some','any','a'], a: 'any', tip: 'V záporu používáme "any".' },
+    { q: 'What time ___ the film start?', options: ['do','does','is'], a: 'does', tip: 'Otázka v Present Simple s "the film" → "does".' },
+    { q: 'I\'m going ___ my grandmother tomorrow.', options: ['visit','to visit','visiting'], a: 'to visit', tip: 'Going to + infinitiv vyjadřuje plán do budoucna.' },
+    { q: 'You ___ wear a seat belt in a car.', options: ['should','can\'t','doesn\'t'], a: 'should', tip: '"Should" vyjadřuje radu / doporučení.' }
+  ],
+  B1: [
+    { q: 'If I ___ more time, I would learn Spanish.', options: ['have','had','would have'], a: 'had', tip: '2. kondicionál: If + minulý čas, would + infinitiv.' },
+    { q: 'She has lived here ___ 2015.', options: ['for','since','from'], a: 'since', tip: '"Since" + bod v čase, "for" + délka trvání.' },
+    { q: 'This bridge ___ in 1890.', options: ['built','was built','has built'], a: 'was built', tip: 'Trpný rod v minulosti: was/were + příčestí minulé.' },
+    { q: 'He asked me where ___.', options: ['I lived','did I live','do I live'], a: 'I lived', tip: 'V nepřímé otázce je běžný slovosled (bez pomocného slovesa).' },
+    { q: 'I\'m used to ___ early.', options: ['get up','getting up','got up'], a: 'getting up', tip: '"Be used to" + -ing = být zvyklý na něco.' },
+    { q: 'You ___ smoke here. It\'s forbidden.', options: ['mustn\'t','don\'t have to','needn\'t'], a: 'mustn\'t', tip: '"Mustn\'t" = zákaz, "don\'t have to" = není nutné.' },
+    { q: 'I\'ve never ___ sushi.', options: ['eat','ate','eaten'], a: 'eaten', tip: 'Present Perfect: have + příčestí minulé (eat – ate – eaten).' }
+  ],
+  B2: [
+    { q: 'If she had studied, she ___ the exam.', options: ['would pass','would have passed','will pass'], a: 'would have passed', tip: '3. kondicionál: If + had + příčestí, would have + příčestí.' },
+    { q: 'By next year, I ___ here for ten years.', options: ['will work','will have worked','work'], a: 'will have worked', tip: 'Future Perfect: will have + příčestí – dokončeno do určitého bodu.' },
+    { q: 'I wish I ___ taller.', options: ['am','were','would be'], a: 'were', tip: 'Přání týkající se přítomnosti → minulý čas (were).' },
+    { q: 'Not only ___ late, but he also forgot the documents.', options: ['he was','was he','he is'], a: 'was he', tip: 'Po "Not only" na začátku věty následuje inverze.' },
+    { q: 'She suggested ___ a taxi.', options: ['to take','taking','take'], a: 'taking', tip: '"Suggest" se pojí s tvarem -ing.' },
+    { q: 'The man ___ car was stolen called the police.', options: ['who','whose','which'], a: 'whose', tip: '"Whose" vyjadřuje přivlastnění (jehož, jejíž).' },
+    { q: 'I\'d rather you ___ here.', options: ['don\'t smoke','didn\'t smoke','not smoke'], a: 'didn\'t smoke', tip: '"I\'d rather + osoba + minulý čas" = raději bych, abys…' }
+  ],
+  C1: [
+    { q: 'Hardly ___ arrived when the meeting began.', options: ['had I','I had','have I'], a: 'had I', tip: 'Po "Hardly" na začátku věty následuje inverze: Hardly had I…' },
+    { q: 'Were it not for your help, we ___ failed.', options: ['would have','will','had'], a: 'would have', tip: 'Inverzní kondicionál (= If it had not been for…).' },
+    { q: 'He is said ___ the country last year.', options: ['to leave','to have left','leaving'], a: 'to have left', tip: 'Perfektní infinitiv vyjadřuje událost před okamžikem mluvení.' },
+    { q: 'No sooner ___ than it started to rain.', options: ['we had left','had we left','did we leave'], a: 'had we left', tip: 'No sooner + inverze + than.' },
+    { q: 'She insisted that he ___ present.', options: ['be','is','was'], a: 'be', tip: 'Subjunktiv po slovesech jako insist, demand, suggest.' },
+    { q: 'It\'s high time you ___ a decision.', options: ['make','made','will make'], a: 'made', tip: '"It\'s high time" + minulý čas = už je nejvyšší čas.' },
+    { q: 'Little ___ she know about the plan.', options: ['did','does','had'], a: 'did', tip: '"Little" na začátku věty vyvolává inverzi.' }
+  ]
+};
+
+/* ================= STATE ================= */
+const KEY = 'english-trainer-v1';
+let S = load();
+function load() {
+  const def = { level: null, xp: 0, streak: 0, lastDay: null, box: {}, stats: {} };
+  try { return Object.assign(def, JSON.parse(localStorage.getItem(KEY)) || {}); } catch (e) { return def; }
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+function today() { return new Date().toISOString().slice(0, 10); }
+function touchStreak() {
+  const t = today();
+  if (S.lastDay === t) return;
+  const y = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+  S.streak = S.lastDay === y ? S.streak + 1 : 1;
+  S.lastDay = t;
+}
+function addXp(n) { S.xp += n; touchStreak(); save(); renderHeader(); }
+
+/* ================= HELPERS ================= */
+const $ = s => document.querySelector(s);
+const app = $('#app');
+function el(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  for (const k in (attrs || {})) {
+    if (k === 'class') e.className = attrs[k];
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), attrs[k]);
+    else e.setAttribute(k, attrs[k]);
+  }
+  kids.flat().forEach(c => e.append(c instanceof Node ? c : document.createTextNode(c)));
+  return e;
+}
+function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function mount(...nodes) { app.replaceChildren(...nodes); window.scrollTo(0, 0); }
+function speak(text) {
+  if (!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text); u.lang = 'en-GB'; u.rate = .9;
+  speechSynthesis.speak(u);
+}
+function levelInfo() { return LEVELS.find(l => l.id === S.level); }
+function norm(s) { return s.toLowerCase().replace(/[.!?,']/g, '').replace(/\s+/g, ' ').trim(); }
+
+function renderHeader() {
+  $('#chip-level').textContent = S.level ? 'Úroveň ' + S.level : 'Úroveň neurčena';
+  $('#chip-streak').textContent = '🔥 ' + S.streak + (S.streak === 1 ? ' den' : ' dní');
+  $('#chip-xp').textContent = '⭐ ' + S.xp + ' XP';
+}
+
+/* ================= SCREENS ================= */
+function home() {
+  if (!S.level) return chooseLevel();
+  const li = levelInfo();
+  const modes = [
+    ['🃏 Kartičky', 'Slovíčka s opakováním – systém si pamatuje, co neumíš.', flashcards],
+    ['❓ Kvíz', 'Vyber správný český překlad anglického slova.', quizVocab],
+    ['⌨️ Psaní', 'Přelož české slovo do angličtiny a napiš ho.', typing],
+    ['🧩 Gramatika', 'Doplň správný tvar do věty.', quizGrammar]
+  ];
+  mount(
+    el('h1', {}, 'Ahoj! Co si dnes procvičíme?'),
+    el('p', { class: 'lead' }, `Aktuální úroveň: ${li.id} – ${li.name}. `,
+      el('button', { class: 'link', onclick: chooseLevel }, 'Změnit úroveň')),
+    el('div', { class: 'grid' }, modes.map(m =>
+      el('button', { class: 'tile card', onclick: m[2] }, el('b', {}, m[0]), el('small', {}, m[1])))),
+    progressCard()
+  );
+}
+
+function progressCard() {
+  const rows = LEVELS.map(l => {
+    const words = VOCAB[l.id];
+    const known = words.filter(w => (S.box[w[0]] || 0) >= 3).length;
+    const pct = Math.round(known / words.length * 100);
+    return el('div', { class: 'bar-line' }, l.id,
+      el('div', { class: 'bar-track' }, el('div', { style: 'width:' + pct + '%' })), pct + ' %');
+  });
+  return el('div', { class: 'card' }, el('h2', {}, 'Naučená slovíčka podle úrovně'), el('div', { class: 'bars' }, rows),
+    el('p', { class: 'sub', style: 'margin:10px 0 0' }, 'Slovíčko je „naučené", když ho správně poznáš 3× po sobě.'));
+}
+
+function chooseLevel() {
+  mount(
+    el('h1', {}, 'Jakou máš úroveň angličtiny?'),
+    el('p', { class: 'lead' }, 'Vyber odhad podle popisu, nebo si udělej krátký test (10 otázek) a úroveň ti určíme.'),
+    el('div', { class: 'grid' }, LEVELS.map(l =>
+      el('button', { class: 'tile card' + (S.level === l.id ? ' active' : ''), onclick: () => { S.level = l.id; save(); renderHeader(); home(); } },
+        el('b', {}, `${l.id} – ${l.name}`), el('small', {}, l.desc)))),
+    el('div', { class: 'row' }, el('button', { class: 'primary', onclick: placementTest }, '🎯 Nevím – otestovat mě'),
+      S.level ? el('button', { onclick: home }, 'Zpět') : '')
+  );
+}
+
+/* ---- Generic question session ---- */
+function session({ title, items, onAnswer, after }) {
+  let i = 0, score = 0;
+  function show() {
+    if (i >= items.length) return finish();
+    const it = items[i];
+    let answered = false;
+    const fb = el('div');
+    const nextBtn = el('button', { class: 'primary', onclick: () => { i++; show(); } }, i === items.length - 1 ? 'Dokončit' : 'Další →');
+    const done = (ok, msg) => {
+      if (answered) return; answered = true;
+      if (ok) { score++; addXp(10); }
+      onAnswer && onAnswer(it, ok);
+      fb.className = 'feedback ' + (ok ? 'ok' : 'bad');
+      fb.replaceChildren(el('b', {}, ok ? '✅ Správně! +10 XP' : '❌ Špatně'), el('div', {}, msg || ''));
+      body.append(el('div', { class: 'row' }, nextBtn)); nextBtn.focus();
+    };
+    const body = el('div', { class: 'card' },
+      el('div', { class: 'sub' }, title + ' · ' + (i + 1) + '/' + items.length),
+      el('div', { class: 'prompt' }, it.prompt), el('div', { class: 'sub' }, it.sub || ''),
+      it.render(done), fb);
+    mount(el('div', { class: 'progress' }, el('div', { style: 'width:' + (i / items.length * 100) + '%' })), body);
+  }
+  function finish() {
+    const pct = Math.round(score / items.length * 100);
+    if (after) return after(score, items.length);
+    S.stats.sessions = (S.stats.sessions || 0) + 1; save();
+    mount(el('div', { class: 'card center' },
+      el('p', { class: 'big' }, pct >= 80 ? '🏆' : pct >= 50 ? '👍' : '💪'),
+      el('h1', {}, `${score} / ${items.length} správně`),
+      el('p', { class: 'lead' }, pct >= 80 ? 'Skvělá práce!' : pct >= 50 ? 'Dobrý výsledek, pokračuj!' : 'Nevadí, opakování je matka moudrosti.'),
+      el('div', { class: 'row' }, el('button', { class: 'primary', onclick: () => session({ title, items: items.map(x => x), onAnswer, after }) }, 'Znovu'),
+        el('button', { onclick: home }, 'Domů'))));
+  }
+  show();
+}
+
+function optionsRender(options, correct, done, explain) {
+  const wrap = el('div', { class: 'options' });
+  options.forEach(o => {
+    const b = el('button', { onclick: () => {
+      const ok = o === correct;
+      [...wrap.children].forEach(x => { x.disabled = true; if (x.textContent === correct) x.classList.add('ok'); });
+      if (!ok) b.classList.add('bad');
+      done(ok, explain(ok));
+    } }, o);
+    wrap.append(b);
+  });
+  return wrap;
+}
+
+function bumpBox(word, ok) { S.box[word] = ok ? Math.min((S.box[word] || 0) + 1, 5) : 0; save(); }
+function pickWords(n) {
+  const words = VOCAB[S.level].slice();
+  words.sort((a, b) => (S.box[a[0]] || 0) - (S.box[b[0]] || 0) + (Math.random() - .5));
+  return shuffle(words.slice(0, n));
+}
+
+/* ---- Flashcards ---- */
+function flashcards() {
+  const words = pickWords(10);
+  let i = 0, known = 0;
+  function show() {
+    if (i >= words.length) {
+      mount(el('div', { class: 'card center' }, el('p', { class: 'big' }, '🃏'),
+        el('h1', {}, `Znáš ${known} z ${words.length} slovíček`),
+        el('div', { class: 'row' }, el('button', { class: 'primary', onclick: flashcards }, 'Další kolo'), el('button', { onclick: home }, 'Domů'))));
+      return;
+    }
+    const w = words[i]; let flipped = false;
+    const card = el('div', { class: 'card flash', tabindex: '0', role: 'button', 'aria-label': 'Otočit kartičku' });
+    const front = () => card.replaceChildren(el('div', { class: 'word' }, w[0]), el('div', { class: 'hint' }, 'Klikni pro překlad'));
+    const back = () => card.replaceChildren(el('div', { class: 'word' }, w[1]), el('div', { class: 'hint' }, '„' + w[2] + '"'));
+    const flip = () => { flipped = !flipped; flipped ? back() : front(); actions.hidden = !flipped; };
+    card.addEventListener('click', flip);
+    card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } });
+    const rate = ok => { bumpBox(w[0], ok); if (ok) { known++; addXp(5); } i++; show(); };
+    const actions = el('div', { class: 'row', hidden: '' },
+      el('button', { onclick: () => rate(false) }, '😕 Neznám'), el('button', { class: 'primary', onclick: () => rate(true) }, '😀 Znám'));
+    front();
+    mount(el('div', { class: 'progress' }, el('div', { style: 'width:' + (i / words.length * 100) + '%' })),
+      card, el('div', { class: 'row' }, el('button', { onclick: () => speak(w[0]) }, '🔊 Poslechnout'), el('button', { onclick: home }, 'Ukončit')), actions);
+  }
+  show();
+}
+
+/* ---- Vocabulary quiz (EN -> CS) ---- */
+function quizVocab() {
+  const all = VOCAB[S.level];
+  const items = pickWords(10).map(w => {
+    const wrong = shuffle(all.filter(x => x !== w)).slice(0, 3).map(x => x[1]);
+    return { prompt: w[0], sub: 'Co znamená toto slovo?', render: done => el('div', {},
+      el('div', { class: 'row', style: 'margin:0 0 10px' }, el('button', { onclick: () => speak(w[0]) }, '🔊 Poslechnout')),
+      optionsRender(shuffle([w[1], ...wrong]), w[1], done, ok => ok ? `„${w[2]}"` : `Správně: ${w[1]} – „${w[2]}"`)), w };
+  });
+  session({ title: 'Kvíz', items, onAnswer: (it, ok) => bumpBox(it.w[0], ok) });
+}
+
+/* ---- Typing (CS -> EN) ---- */
+function typing() {
+  const items = pickWords(8).map(w => ({
+    prompt: w[1], sub: 'Napiš anglicky:', w,
+    render: done => {
+      const inp = el('input', { type: 'text', autocomplete: 'off', autocapitalize: 'none', spellcheck: 'false', 'aria-label': 'Anglický překlad' });
+      const check = () => {
+        if (inp.disabled) return;
+        const ok = norm(inp.value) === norm(w[0]);
+        inp.disabled = true; btn.disabled = true;
+        done(ok, ok ? `„${w[2]}"` : `Správně: ${w[0]} – „${w[2]}"`);
+      };
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
+      const btn = el('button', { class: 'primary', onclick: check }, 'Zkontrolovat');
+      setTimeout(() => inp.focus(), 0);
+      return el('div', {}, inp, el('div', { class: 'row' }, btn));
+    }
+  }));
+  session({ title: 'Psaní', items, onAnswer: (it, ok) => bumpBox(it.w[0], ok) });
+}
+
+/* ---- Grammar ---- */
+function grammarItems(qs) {
+  return qs.map(g => ({ prompt: g.q, sub: 'Vyber správnou možnost:',
+    render: done => optionsRender(shuffle(g.options), g.a, done, ok => (ok ? '' : `Správně: ${g.a}. `) + g.tip) }));
+}
+function quizGrammar() {
+  session({ title: 'Gramatika', items: grammarItems(shuffle(GRAMMAR[S.level]).slice(0, 7)) });
+}
+
+/* ---- Placement test ---- */
+function placementTest() {
+  const results = {};
+  const items = [];
+  LEVELS.forEach(l => GRAMMAR[l.id].slice(0, 2).forEach(g => items.push({ lvl: l.id, g })));
+  const built = grammarItems(items.map(x => x.g));
+  built.forEach((b, idx) => b.lvl = items[idx].lvl);
+  session({
+    title: 'Zařazovací test', items: built,
+    onAnswer: (it, ok) => { results[it.lvl] = (results[it.lvl] || 0) + (ok ? 1 : 0); },
+    after: () => {
+      let idx = 0;
+      for (let k = 0; k < LEVELS.length; k++) {
+        const c = results[LEVELS[k].id] || 0;
+        if (c === 2) { idx = k; continue; }
+        idx = c === 1 ? k : Math.max(k - 1, 0);
+        break;
+      }
+      const lvl = LEVELS[idx];
+      mount(el('div', { class: 'card center' }, el('p', { class: 'big' }, '🎯'),
+        el('h1', {}, 'Tvoje úroveň: ' + lvl.id), el('p', { class: 'lead' }, lvl.name + ' – ' + lvl.desc),
+        el('div', { class: 'row' },
+          el('button', { class: 'primary', onclick: () => { S.level = lvl.id; save(); renderHeader(); home(); } }, 'Začít s ' + lvl.id),
+          el('button', { onclick: chooseLevel }, 'Vybrat jinou'))));
+    }
+  });
+}
+
+/* ================= INIT ================= */
+$('#logo').addEventListener('click', home);
+$('#logo').addEventListener('keydown', e => { if (e.key === 'Enter') home(); });
+renderHeader();
+home();
+</script>
+</body>
+</html>
